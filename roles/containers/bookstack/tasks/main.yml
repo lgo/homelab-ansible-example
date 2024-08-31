@@ -1,0 +1,25 @@
+- name: Setup Docker container for bookstack
+  ansible.builtin.include_role:
+    name: docker_container
+  vars:
+    service_name: bookstack
+    service_version: 24.02.3
+    compose_file: templates/compose.yml.j2
+    # Adds Traefik and homepage annotations specific to the "service". Supports
+    # multiple entries, such as when multiple containers exposing serviecs are
+    # in `compose.yml`, like a Sonarr and Sonarr 4K instance.
+    #
+    # By default, we assume the Compose service name matches `{{ service_name  }}`
+    # but it can be explicitly listed in those cases with the `service:` key.
+    services:
+      - port: 80
+        # Allows for a variety of homepage args. See the argument_specs.yml
+        homepage:
+          name: Bookstack
+          description: Internal wiki
+          group: Productivity
+        # Supports `semver` or `servarr-linuxserver` (semver with `-lsXXX`
+        # suffix)
+        #
+        # Or instead include `wud_version_regex` to have a more specific rule.
+        wud_version_type: semver

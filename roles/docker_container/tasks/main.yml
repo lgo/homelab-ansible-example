@@ -1,0 +1,29 @@
+- ansible.builtin.import_role:
+    name: mitre.yedit
+- name: "{{ service_name }} - Create compose directory"
+  ansible.builtin.file:
+    path: "{{ docker_stack_dir }}/{{ service_name }}"
+    state: directory
+    recurse: true
+    owner: root
+    group: root
+- name: "{{ service_name }} - Copy and template the Docker compose file"
+  ansible.builtin.template:
+    src: "{{ compose_file }}"
+    dest: "{{ docker_stack_dir }}/{{ service_name }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0644"
+  vars:
+    container_service_dir: "{{ container_root }}/{{ service_name }}"
+- name: "{{ service_name }} - Configure Service Docker labels"
+  include_tasks: "service_docker_labels.yml"
+  loop: "{{ services }}"
+  loop_control:
+    loop_var: service_rule
+  when: services is defined
+- name: "{{ service_name }} - Start Docker containers"
+  community.docker.docker_compose_v2:
+    project_src: "{{ docker_stack_dir }}/{{ service_name }}/"
+    state: present
+    remove_orphans: true

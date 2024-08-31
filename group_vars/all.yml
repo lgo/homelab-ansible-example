@@ -1,0 +1,7 @@
+# Domain used for specific service ENV variables and for general Treafik rules.
+domain: internal.pereira.io
+timezone: America/Vancouver
+# Directory used on host to add docker rules.
+docker_stack_dir: /tmp/docker-compose
+# Directory root for container volumes via `container_service_dir`
+container_root: /storage/containers

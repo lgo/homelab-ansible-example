@@ -1,0 +1,7 @@
+# This role ensures we create a `bookstack` database and a database user
+# `bookstack`.
+dependencies:
+  - role: mariadb_db
+    databases:
+      - bookstack
+    user: bookstack

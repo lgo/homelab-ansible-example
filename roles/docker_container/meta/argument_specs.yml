@@ -1,0 +1,86 @@
+---
+argument_specs:
+  main:
+    short_description: "Creates and starts a Docker container"
+    options:
+      service_name:
+        type: str
+        required: true
+        description: "Docker service name"
+      compose_file:
+        type: str
+        required: true
+        description: "Docker compose file name"
+      services:
+        type: list
+        description: "Service configuration (includes reverse proxy, health-check, etc.)"
+        required: false
+        elements: dict
+        options:
+          service:
+            type: str
+            required: false
+            description: "Compose service name. Defaults to top-level `service_name` if unspecified."
+          domain:
+            type: str
+            required: false
+            description: "Domain for service. Defaults to `service_name`.`domain` if unspecified."
+          port:
+            type: str
+            required: true
+            description: "Service port"
+          autokuma:
+            type: dict
+            required: false
+            description: "AutoKuma check. This uses the defaults when not defined."
+            options:
+              enabled:
+                type: bool
+                required: false
+                default: true
+                description: "Whether to enable (or disable) the autokuma check."
+              type:
+                type: str
+                required: false
+                choices:
+                  - internal_web_app
+                  - web_app
+                description: "AutoKuma health check type. Defaults to `internal_web_app`"
+              path:
+                type: str
+                required: false
+                default: "/"
+                description: "Path for the AutoKuma HTTP checks. Defaults to `/`"
+          homepage:
+            type: dict
+            required: false
+            description: "Homepage descriptor. This uses defaults when not defined."
+            options:
+              enabled:
+                type: bool
+                required: false
+                default: true
+                description: "Whether Homepage is enabled (or disabled)"
+              name:
+                type: str
+                required: false
+                description: "Human-friendly service name for Homepage"
+              icon:
+                type: str
+                required: false
+                description: "Service icon for Homepage. By default, we use the service name."
+              description:
+                type: str
+                required: false
+                description: "Service description for Homepage"
+              group:
+                type: str
+                required: false
+                description: "Service group for Homepage. Required unless disabled."
+          wud_version_type:
+            type: str
+            choices:
+              - semver
+              - servarr-linuxserver
+            required: false
+            description: "Container version format type for WhatsUpDocker"

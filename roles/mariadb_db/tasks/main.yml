@@ -1,0 +1,23 @@
+# TODO(joey): The `login_password` here refers to an admin user
+# which can create new databases and users.
+- name: Create databases
+  community.mysql.mysql_db:
+    config_file: ""
+    login_host: 127.0.0.1
+    login_user: root
+    login_password: foobar
+    name: "{{ database }}"
+    state: present
+  loop_control:
+    loop_var: database
+  loop: "{{ databases }}"
+- name: "Create user {{ user }}"
+  community.mysql.mysql_user:
+    config_file: ""
+    login_host: 127.0.0.1
+    login_user: root
+    login_password: foobar
+    name: "{{ user }}"
+    priv: "{{ databases | as_database_privilege('ALL') }}"
+    # TODO(joey): Currently, this outputs a random password. The ansible roles
+    # require an already hashed password if we wanted to provide one as-is.

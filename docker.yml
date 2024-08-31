@@ -1,0 +1,11 @@
+- name: containers
+  hosts: docker
+  gather_facts: false
+  tags: always
+  tasks:
+    - name: Setup services
+      ansible.builtin.include_role:
+        name: "{{ item }}"
+      loop:
+        # And, add all other `containers` roles to the list.
+        - containers/bookstack

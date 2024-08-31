@@ -1,0 +1,134 @@
+- name: "Set fact - autokuma"
+  ansible.builtin.set_fact:
+    autokuma: "{{ service_rule.autokuma }}"
+  when: service_rule.autokuma is defined
+
+- name: "Set fact - autokuma (default)"
+  ansible.builtin.set_fact:
+    autokuma: {}
+  when: service_rule.autokuma is not defined
+
+- name: "Set fact - homepage"
+  ansible.builtin.set_fact:
+    homepage: "{{ service_rule.homepage }}"
+  when: service_rule.homepage is defined
+
+- name: "Set fact - homepage (default)"
+  ansible.builtin.set_fact:
+    homepage: {}
+  when: service_rule.homepage is not defined
+
+- name: "{{ service_name }} - Verify homepage `group` is set if using homepage"
+  ansible.builtin.assert:
+    that:
+      - (homepage.enabled is not defined or homepage.enabled) and homepage.group is defined
+    fail_msg: "Must set `homepage.group` when using homepage"
+
+- name: "Set fact - compose_service_name"
+  ansible.builtin.set_fact:
+    compose_service_name: "{{ service_rule.service | default(service_name) }}"
+
+- name: "Set fact - service_domain"
+  ansible.builtin.set_fact:
+    service_domain: "{{ service_rule.domain | default(compose_service_name + '.' + domain) }}"
+
+- name: "{{ service_name }} - Verify only one-of `wud_version_type` or `wud_version_regex` are set"
+  ansible.builtin.assert:
+    that:
+      - not (service_rule.wud_version_type is defined and service_rule.wud_version_regex is defined)
+    fail_msg: "cannot set both `wud_version_type` and `wud_version_regex"
+    quiet: true
+
+
+- name: "{{ service_name }} - Add AutoKuma label"
+  yedit:
+    src: "/tmp/docker-compose/{{ service_name }}/compose.yml"
+    edits:
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: >
+          'kuma.__{{ autokuma.type | default('internal_web_app') }}={ "port": {{ service_rule.port }}, "path": "{{ autokuma.path | default('/') }}" }'          
+  when: autokuma.enabled is not defined or autokuma.enabled
+
+- name: "{{ service_name }} - Add Traefik labels"
+  yedit:
+    src: "/tmp/docker-compose/{{ service_name }}/compose.yml"
+    edits:
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: traefik.enable=true
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: traefik.http.routers.{{ compose_service_name }}.rule=Host(`{{ service_domain }}`)
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: traefik.http.routers.{{ compose_service_name }}.service={{ compose_service_name }}
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: traefik.http.services.{{ compose_service_name }}.loadbalancer.server.port={{ service_rule.port }}
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: traefik.http.routers.{{ compose_service_name }}.tls=true
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: traefik.http.routers.{{ compose_service_name }}.tls.certresolver=letsEncrypt
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: traefik.http.routers.{{ compose_service_name }}.tls.domains[0].main={{ domain }}
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: traefik.http.routers.{{ compose_service_name }}.tls.domains[0].sans=*.{{ domain }}
+
+- name: "{{ service_name }} - Add Homepage labels"
+  yedit:
+    src: "/tmp/docker-compose/{{ service_name }}/compose.yml"
+    edits:
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: "homepage.name={{ homepage.name | default(compose_service_name) }}"
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: "homepage.icon={{ homepage.icon | default(compose_service_name) }}"
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: "homepage.href=https://{{ service_domain }}"
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: "homepage.group={{ homepage.group }}"
+  when: homepage.enabled is not defined or homepage.enabled
+
+- name: "{{ service_name }} - Add Homepage labels (homepage.description)"
+  yedit:
+    src: "/tmp/docker-compose/{{ service_name }}/compose.yml"
+    edits:
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        value: "homepage.description={{ homepage.description }}"
+  when: (homepage.enabled is not defined or homepage.enabled) and homepage.description is defined
+
+- name: "{{ service_name }} - Verify only one-of `wud_version_type` or `wud_version_regex` are set"
+  ansible.builtin.assert:
+    that:
+      - not (service_rule.wud_version_type is defined and service_rule.wud_version_regex is defined)
+    fail_msg: "cannot set both `wud_version_type` and `wud_version_regex"
+    quiet: true
+
+- name: "{{ service_name }} - Add WhatsUpDocker labels (via wud_version_type)"
+  yedit:
+    src: "/tmp/docker-compose/{{ service_name }}/compose.yml"
+    edits:
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        # Includes optional `v` to be a more general pattern
+        value: "wud.tag.include=^v?\\d+\\.\\d+\\.\\d+$$"
+  when: service_rule.wud_version_type is defined
+
+- name: "{{ service_name }} - Add WhatsUpDocker labels (via wud_version_regex)"
+  yedit:
+    src: "/tmp/docker-compose/{{ service_name }}/compose.yml"
+    edits:
+      - key: "services.{{ compose_service_name }}.labels"
+        action: append
+        # Includes optional `v` to be a more general pattern
+        value: "wud.tag.include={{ service_rulewud_version_regex }}"
+  when: service_rule.wud_version_regex is defined

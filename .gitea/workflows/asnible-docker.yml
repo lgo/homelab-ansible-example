@@ -1,0 +1,59 @@
+# TODO(joey): This requires an SSH key on Gitea which can access the docker
+# host.
+name: Ansible (docker)
+run-name: ${{ gitea.actor }} is running ansible 🚀
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  Ansible:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository code
+        uses: actions/checkout@v3
+
+      - name: Setup deployment SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Install Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12' 
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      - name: Restore ansible galaxy cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ~/.ansible/roles
+            ~/.ansible/collections            
+          key: ansible-galaxy-${{ hashFiles('galaxy-requirements.yml') }}
+          restore-keys: |
+            ansible-galaxy-            
+
+      - name: Install ansible galaxy dependencies
+        run: ansible-galaxy install -r ansible/galaxy-requirements.yml
+
+      - name: Save ansible galaxy cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.ansible/roles
+            ~/.ansible/collections            
+          key: ansible-galaxy-${{ hashFiles('galaxy-requirements.yml') }}
+
+      - name: Set ANSIBLE_STRATEGY_PLUGINS
+        run: echo "ANSIBLE_STRATEGY_PLUGINS=$(python -c 'import site; print(site.getsitepackages()[0])')/ansible_mitogen/plugins/strategy" >> $GITHUB_ENV
+
+      - name: Run ansible for docker
+        run: ansible-playbook docker.yml
+        env:
+          ANSIBLE_DISPLAY_SKIPPED_HOSTS: false
+          ANSIBLE_DISPLAY_OK_HOSTS: false

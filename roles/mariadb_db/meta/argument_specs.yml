@@ -1,0 +1,14 @@
+---
+argument_specs:
+  main:
+    short_description: "Setup a user and database"
+    options:
+      databases:
+        type: list
+        elements: str
+        required: true
+        description: "Databases to create"
+      user:
+        type: str
+        required: true
+        description: "Database user"
